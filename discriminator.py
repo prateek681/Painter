@@ -21,26 +21,30 @@ def get_discriminator_block(input_dim, output_dim):
          nn.LeakyReLU(0.2, inplace=True)
     )
 
-def get_gen_loss(gen, disc, criterion, num_images, photos, device):
+def get_disc_loss(gen, disc, criterion, photo, num_images, monet, device):
     '''
-    Return the loss of the generator given inputs.
+    Return the loss of the discriminator given inputs.
     Parameters:
-        gen: the generator model, which returns an image given z-dimensional noise
+        gen: the generator model, which returns an image given photo of dimensions im_dim
         disc: the discriminator model, which returns a single-dimensional prediction of real/fake
         criterion: the loss function, which should be used to compare 
                the discriminator's predictions to the ground truth reality of the images 
                (e.g. fake = 0, real = 1)
+        real: a batch of real images
         num_images: the number of images the generator should produce, 
                 which is also the length of the real images
-        z_dim: the dimension of the noise vector, a scalar
+        z_dim: the dimension of the photo
         device: the device type
     Returns:
-        gen_loss: a torch scalar loss value for the current batch
+        disc_loss: a torch scalar loss value for the current batch
     '''
-    fake = gen(photos)
-    disc_fake_pred = disc(fake)
-    gen_loss = criterion(disc_fake_pred, torch.ones_like(disc_fake_pred))
-    return gen_loss
+    fake = gen(photo)
+    disc_fake_pred = disc(fake.detach())
+    disc_fake_loss = criterion(disc_fake_pred, torch.zeros_like(disc_fake_pred))
+    disc_real_pred = disc(monet)
+    disc_real_loss = criterion(disc_real_pred, torch.ones_like(disc_real_pred))
+    disc_loss = (disc_fake_loss + disc_real_loss) / 2
+    return disc_loss
 
 class Discriminator(nn.Module):
     '''
